@@ -22,6 +22,7 @@ router.get('/:id', async function (req, res, next) {
                    ON i.comp_code = c.code
                    WHERE id=$1`,
             [req.params.id]);
+
         const companyRes = await db.query(
             `SELECT code, name, description
                    FROM invoices as i 
@@ -50,7 +51,7 @@ router.post('/', async function (req, res, next) {
         const { comp_code, amt } = req.body;
         const resp = await db.query('SELECT code FROM companies WHERE code=$1', [comp_code])
 
-        if (resp.rows.length < 1) {
+        if (resp.rows.length === 0) {
             const invalidCompanyError = new Error(`There is no company ${comp_code}`);
             invalidCompanyError.status = 404;
             throw invalidCompanyError;
@@ -83,5 +84,26 @@ router.put('/:id', async function (req, res, next) {
         return next(err);
     }
 });
+
+router.delete('/:id', async function (req, res, next) {
+    try {
+        const result = await db.query(
+            `DELETE FROM invoices 
+                WHERE id=$1
+                RETURNING id`,
+            [req.params.id]);
+
+        if (result.rows.length === 0) {
+            throw new ExpressError(`There is no invoice with id of '${req.params.id}`, 404);
+        }
+        return res.status(200).json({ status: "Deleted" });
+
+    } catch (err) {
+        return next(err);
+    }
+});
+
+
+
 
 module.exports = router;

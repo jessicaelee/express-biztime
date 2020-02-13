@@ -16,18 +16,27 @@ router.get('/', async function (req, res, next) {
 
 router.get('/:code', async function (req, res, next) {
     try {
-        const company = await db.query(
-                `SELECT code, name, description 
+        const companyRes = await db.query(
+            `SELECT code, name, description 
                    FROM companies 
                    WHERE code = $1`,
-                [req.params.code])
+            [req.params.code]);
 
-        if (company.rows.length === 0) {
-            let notFoundError = new Error(`There is no company with id ${req.params.code}`);
+        const invoicesRes = await db.query(
+            `SELECT id FROM invoices 
+            WHERE comp_code = $1`,
+            [req.params.code]);
+
+        if (companyRes.rows.length === 0) {
+            let notFoundError = new Error(`There is no company with code ${req.params.code}`);
             notFoundError.status = 404;
             throw notFoundError;
         }
-        return res.status(200).json({ company: company.rows[0] });
+
+        let company = companyRes.rows[0];
+        let invoices = invoicesRes.rows.map(invoice => invoice.id);
+
+        return res.status(200).json({ ...company, invoices });
     } catch (err) {
         return next(err);
     }
